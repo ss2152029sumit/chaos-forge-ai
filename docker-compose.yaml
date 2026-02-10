@@ -1,100 +1,26 @@
+version: '3.8'
+
 services:
-  # PostgreSQL Database (for persistent data)
-  postgres:
-    image: postgres:16-alpine
-    restart: always
-    environment:
-      POSTGRES_USER: chaosforge
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: chaosforge_db
+  postgres-db:
+    image: postgres:15
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - backend
+      - db-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=chaosforge
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U chaosforge"]
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
-
-  # Redis (for caching & session storage)
-  redis:
-    image: redis:7-alpine
     restart: always
-    command: redis-server --requirepass ${REDIS_PASSWORD}
-    volumes:
-      - redis_data:/data
     networks:
-      - backend
-    healthcheck:
-      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
-
-  # Next.js Application (AI Training Frontend)
-  nextjs_app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    restart: always
-    ports:
-      - "3000:3000"
-    environment:
-      DATABASE_URL: postgresql://chaosforge:${POSTGRES_PASSWORD}@postgres:5432/chaosforge_db
-      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
-      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
-      GEMINI_API_KEY: ${GEMINI_API_KEY}
-      NODE_ENV: production
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    networks:
-      - backend
-      - frontend
-    volumes:
-      - ./data:/app/data
-    command: npm start
-
-  # MuJoCo Simulation Environment
-  mujoco_sim:
-    image: haosulab/mujoco-py:latest
-    restart: always
-    environment:
-      MUJOCO_GL: egl
-    volumes:
-      - ./simulations:/workspace
-    networks:
-      - backend
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-
-  # PyBullet Physics Engine
-  pybullet_sim:
-    image: bulletphysics/bullet3:latest
-    restart: always
-    volumes:
-      - ./simulations:/workspace
-    networks:
-      - backend
-    command: python3 -m pybullet_utils.runServer
+      - chaos-net
 
 volumes:
-  postgres_data:
-    driver: local
-  redis_data:
-    driver: local
+  db-data:
 
 networks:
-  backend:
-    driver: bridge
-  frontend:
+  chaos-net:
     driver: bridge
