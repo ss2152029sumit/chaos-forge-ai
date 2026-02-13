@@ -13,4 +13,7 @@ EXPOSE 3000
 
 CMD ["npm", "start"]
 
+git add .
+git commit
+git push
 
