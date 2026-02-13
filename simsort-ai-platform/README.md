@@ -1,4 +1,4 @@
-# SimSort AI Platform
+# chaosforge AI Platform
 
 Basic dashboard for SimSort AI platform.
 
